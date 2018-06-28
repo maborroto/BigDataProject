@@ -3,15 +3,17 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 //hadoop jar C:\Users\Manuel\Documents\NetBeansProjects\BigDataProject\dist\BigDataProject.jar C:\Users\Manuel\Documents\BigDataTest\input C:\Users\Manuel\Documents\BigDataTest\output
 package bigdataproject;
- 
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -41,50 +43,87 @@ import org.xml.sax.SAXException;
  */
 public class BigDataProject {
 
-    static class MapImage extends Mapper<LongWritable, Text, Text, Text> {
-
-        private static DoubleWritable time = new DoubleWritable(1);
+    static class MapImage extends Mapper<LongWritable, Text, LongWritable, Text> {
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             try {
+                InputStream inputS = new ByteArrayInputStream(value.toString().getBytes(Charset.forName("UTF-8")));
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder dBuilder = factory.newDocumentBuilder();
+                Document document = dBuilder.parse(inputS);
+                document.getDocumentElement().normalize();
+                NodeList nodes = document.getElementsByTagName("page");
+                for (int i = 0; i < nodes.getLength(); i++) {
 
-                InputStream is = new ByteArrayInputStream(value.toString().getBytes());
-                DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-                Document doc = dBuilder.parse(is);
-
-                doc.getDocumentElement().normalize();
-
-                NodeList nList = doc.getElementsByTagName("page");
-
-                for (int temp = 0; temp < nList.getLength(); temp++) {
-
-                    Node nNode = nList.item(temp);
-
-                    if (nNode.getNodeType() == Node.ELEMENT_NODE) {
-
-                        Element eElement = (Element) nNode;
-
+                    Node node = nodes.item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element eElement = (Element) node;
                         String id = eElement.getElementsByTagName("id").item(0).getTextContent();
-                        String name = eElement.getElementsByTagName("title").item(0).getTextContent();
+                        String text = eElement.getElementsByTagName("text").item(0).getTextContent();
                         //String gender = eElement.getElementsByTagName("gender").item(0).getTextContent();
 
-                        // System.out.println(id + "/////////////////////////////");
-                        context.write(new Text(id), new Text(name));
+                        String imgProp = extractImage(text);
+                        if (!imgProp.isEmpty()) {
+                            context.write(new LongWritable(Long.valueOf(id)), new Text(imgProp));
+                        }
 
                     }
                 }
             } catch (Exception e) {
                 //  LogWriter.getInstance().WriteLog(e.getMessage());
+                e.printStackTrace();
             }
+        }
+
+        private static String extractImage(String textTag) {
+            //"\\[[fF]ile\\s*:\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
+            //".*\\|\\s*[Ii]mmagine\\s*=\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
+            String regExp1 = "[fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg)";
+            String regExp2 = "[Ii]mmagine\\s*=\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg)";
+            String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
+//            text = text.replaceAll("<!--.*?-->", "");
+            Pattern pattern1 = Pattern.compile(regExp1);
+            Pattern pattern2 = Pattern.compile(regExp2);
+            Matcher matcher = pattern1.matcher(text);
+
+            int pos1 = Integer.MAX_VALUE;
+            int end1 = Integer.MAX_VALUE;
+            int pos2 = Integer.MAX_VALUE;
+            int end2 = Integer.MAX_VALUE;
+            if (matcher.find()) {
+                pos1 = matcher.start();
+                end1 = matcher.end();
+            }
+
+            matcher = pattern2.matcher(text);
+            if (matcher.find()) {
+                pos2 = matcher.start();
+                end2 = matcher.end();
+            }
+
+            if (pos1 != Integer.MAX_VALUE || pos2 != Integer.MAX_VALUE) {
+                if (pos1 < pos2 && pos2 != 0) {
+                    String img = textTag.substring(pos1, end1);
+                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
+                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp)", "");
+                    return img.trim();
+                } else if (pos2 < pos1 && pos1 != 0) {
+                    String img = textTag.substring(pos2, end2);
+                    img = img.replaceAll(".*[Ii]mmagine\\s*=\\s*", "");
+                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
+                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp)", "");
+                    return img.trim();
+                }
+            }
+            return "";
         }
     }
 
-    static class ReducerImage extends Reducer<Text, Text, Text, Text> {
+    static class ReducerImage extends Reducer<LongWritable, Text, LongWritable, Text> {
 
         @Override
-        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+        protected void reduce(LongWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 //            String row = "";
 //            context.write(key, new Text(row));
 //            HERE WE GOT SORTED VALUES BY TIME
@@ -116,16 +155,16 @@ public class BigDataProject {
             conf.set("START_TAG_KEY", "<page>");
             conf.set("END_TAG_KEY", "</page>");
 
-            Job job = new Job(conf, "XML Processing Processing");
+            Job job = Job.getInstance(conf, "Image Procesing");
             job.setJarByClass(BigDataProject.class);
             job.setMapperClass(MapImage.class);
             job.setReducerClass(ReducerImage.class);
 
-            job.setNumReduceTasks(3);
+//            job.setNumReduceTasks(3);
             job.setInputFormatClass(XMLInputFormat.class);
             // job.setOutputValueClass(TextOutputFormat.class);
 
-            job.setOutputKeyClass(Text.class);
+            job.setOutputKeyClass(LongWritable.class);
             job.setOutputValueClass(Text.class);
 
             FileInputFormat.addInputPath(job, new Path(args[0]));
