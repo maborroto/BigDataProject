@@ -103,12 +103,12 @@ public class BigDataProject {
             }
 
             if (pos1 != Integer.MAX_VALUE || pos2 != Integer.MAX_VALUE) {
-                if (pos1 < pos2 && pos2 != 0) {
+                if (pos1 < pos2) {
                     String img = textTag.substring(pos1, end1);
                     img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
                     img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp)", "");
                     return img.trim();
-                } else if (pos2 < pos1 && pos1 != 0) {
+                } else if (pos2 < pos1) {
                     String img = textTag.substring(pos2, end2);
                     img = img.replaceAll(".*[Ii]mmagine\\s*=\\s*", "");
                     img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
