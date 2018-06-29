@@ -16,10 +16,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -27,15 +27,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FixedLengthInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 /**
  *
@@ -61,7 +59,6 @@ public class BigDataProject {
                         Element eElement = (Element) node;
                         String id = eElement.getElementsByTagName("id").item(0).getTextContent();
                         String text = eElement.getElementsByTagName("text").item(0).getTextContent();
-                        //String gender = eElement.getElementsByTagName("gender").item(0).getTextContent();
 
                         String imgProp = extractImage(text);
                         if (!imgProp.isEmpty()) {
@@ -73,7 +70,6 @@ public class BigDataProject {
                     }
                 }
             } catch (Exception e) {
-                //  LogWriter.getInstance().WriteLog(e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -82,52 +78,35 @@ public class BigDataProject {
          * Extract the the first image from the WIKI Text Tag
          *
          * @param textTag
-         * @return
+         * @return the image name
          */
         private static String extractImage(String textTag) {
-            //"\\[[fF]ile\\s*:\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
-            //".*\\|\\s*[Ii]mmagine\\s*=\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
+            //REGULAR EXPRESION TO DETECT THE IMAGES IN THE TEXT
             String regExp1 = "([fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Ii]mage\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Bb]andiera\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Pp]anorama\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
-//            String regExp2 = "[Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)";
-//            String regExp3 = "[Ii]mage\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)";
             String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
-//            text = text.replaceAll("<!--.*?-->", "");
             Pattern pattern1 = Pattern.compile(regExp1);
-//            Pattern pattern2 = Pattern.compile(regExp2);
             Matcher matcher = pattern1.matcher(text);
 
-            int pos1 = Integer.MAX_VALUE;
-            int end1 = Integer.MAX_VALUE;
-//            int pos2 = Integer.MAX_VALUE;
-//            int end2 = Integer.MAX_VALUE;
+            int pos = Integer.MAX_VALUE;
+            int end = Integer.MAX_VALUE;
+
+            //FINDING THE FIRST MATCHING
             if (matcher.find()) {
-                pos1 = matcher.start();
-                end1 = matcher.end();
+                pos = matcher.start();
+                end = matcher.end();
             }
 
-//            matcher = pattern2.matcher(text);
-//            if (matcher.find()) {
-//                pos2 = matcher.start();
-//                end2 = matcher.end();
-//            }
-            if (pos1 != Integer.MAX_VALUE /*|| pos2 != Integer.MAX_VALUE*/) {
-//                if (pos1 < pos2) {
-                String img = textTag.substring(pos1, end1);
+            if (pos != Integer.MAX_VALUE /*|| pos2 != Integer.MAX_VALUE*/) {
+                String img = textTag.substring(pos, end);
+                //REMOVING THE IMAGE TAG TO THE IMAGE NAME AND REMOVING THE COMMENTS
                 img = img.replaceAll("(.*[fF]ile\\s*:\\s*)|([Ii]mmagine\\s*[=:]\\s*)|([Ii]mage\\s*[=:]\\s*)|([Bb]andiera\\s*[=:]\\s*)", "");
                 img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)", "");
                 img = img.replaceAll("\"", "\"\"");
                 return img.trim();
-//                } else if (pos2 < pos1) {
-//                    String img = textTag.substring(pos2, end2);
-//                    img = img.replaceAll(".*[Ii]mmagine\\s*[=:]\\s*", "");
-//                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
-//                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)", "");
-//                    return img.trim();
-//                }
             }
             return "";
         }
@@ -140,9 +119,7 @@ public class BigDataProject {
 
         @Override
         protected void reduce(LongWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-//            String row = "";
-//            context.write(key, new Text(row));
-//            HERE WE GOT SORTED VALUES BY TIME
+
             for (Text value : values) {
                 String row = "";
                 if (!exReducer) {
@@ -154,8 +131,6 @@ public class BigDataProject {
             if (!exReducer) {
                 exReducer = !exReducer;
             }
-
-            // context.write(key.key, new Text(row));
         }
     }
 
@@ -166,15 +141,7 @@ public class BigDataProject {
         // TODO code application logic here
 
         try {
-
             Configuration conf = new Configuration();
-            // conf.setInt(FixedLengthInputFormat.FIXED_RECORD_LENGTH, 2048);
-
-            // OR alternatively you can set it this way, the name of the
-            // property is
-            // "mapreduce.input.fixedlengthinputformat.record.length"
-            // conf.setInt("mapreduce.input.fixedlengthinputformat.record.length",
-            // 2048);
             String[] arg = new GenericOptionsParser(conf, args).getRemainingArgs();
 
             conf.set("START_TAG_KEY", "<page>");
@@ -184,11 +151,7 @@ public class BigDataProject {
             job.setJarByClass(BigDataProject.class);
             job.setMapperClass(MapImage.class);
             job.setReducerClass(ReducerImage.class);
-
-//            job.setNumReduceTasks(3);
             job.setInputFormatClass(XMLInputFormat.class);
-            // job.setOutputValueClass(TextOutputFormat.class);
-
             job.setOutputKeyClass(LongWritable.class);
             job.setOutputValueClass(Text.class);
 
