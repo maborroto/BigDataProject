@@ -35,10 +35,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-/**
- *
- * @author Manuel
- */
 public class BigDataProject {
 
     static class MapImage extends Mapper<LongWritable, Text, LongWritable, Text> {
