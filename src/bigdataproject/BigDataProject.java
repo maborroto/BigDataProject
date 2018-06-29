@@ -65,6 +65,8 @@ public class BigDataProject {
 
                         String imgProp = extractImage(text);
                         if (!imgProp.isEmpty()) {
+                            imgProp = imgProp.replaceAll(" ", "_");
+                            imgProp = ("\"") + imgProp + ("\"");
                             context.write(new LongWritable(Long.valueOf(id)), new Text(imgProp));
                         }
 
@@ -76,51 +78,65 @@ public class BigDataProject {
             }
         }
 
+        /**
+         * Extract the the first image from the WIKI Text Tag
+         *
+         * @param textTag
+         * @return
+         */
         private static String extractImage(String textTag) {
             //"\\[[fF]ile\\s*:\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
             //".*\\|\\s*[Ii]mmagine\\s*=\\s*.*\\.JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp:";
-            String regExp1 = "[fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg)";
-            String regExp2 = "[Ii]mmagine\\s*=\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg)";
+            String regExp1 = "([fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Ii]mage\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Bb]andiera\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Pp]anorama\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
+//            String regExp2 = "[Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)";
+//            String regExp3 = "[Ii]mage\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)";
             String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
 //            text = text.replaceAll("<!--.*?-->", "");
             Pattern pattern1 = Pattern.compile(regExp1);
-            Pattern pattern2 = Pattern.compile(regExp2);
+//            Pattern pattern2 = Pattern.compile(regExp2);
             Matcher matcher = pattern1.matcher(text);
 
             int pos1 = Integer.MAX_VALUE;
             int end1 = Integer.MAX_VALUE;
-            int pos2 = Integer.MAX_VALUE;
-            int end2 = Integer.MAX_VALUE;
+//            int pos2 = Integer.MAX_VALUE;
+//            int end2 = Integer.MAX_VALUE;
             if (matcher.find()) {
                 pos1 = matcher.start();
                 end1 = matcher.end();
             }
 
-            matcher = pattern2.matcher(text);
-            if (matcher.find()) {
-                pos2 = matcher.start();
-                end2 = matcher.end();
-            }
-
-            if (pos1 != Integer.MAX_VALUE || pos2 != Integer.MAX_VALUE) {
-                if (pos1 < pos2) {
-                    String img = textTag.substring(pos1, end1);
-                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
-                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp)", "");
-                    return img.trim();
-                } else if (pos2 < pos1) {
-                    String img = textTag.substring(pos2, end2);
-                    img = img.replaceAll(".*[Ii]mmagine\\s*=\\s*", "");
-                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
-                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp)", "");
-                    return img.trim();
-                }
+//            matcher = pattern2.matcher(text);
+//            if (matcher.find()) {
+//                pos2 = matcher.start();
+//                end2 = matcher.end();
+//            }
+            if (pos1 != Integer.MAX_VALUE /*|| pos2 != Integer.MAX_VALUE*/) {
+//                if (pos1 < pos2) {
+                String img = textTag.substring(pos1, end1);
+                img = img.replaceAll("(.*[fF]ile\\s*:\\s*)|([Ii]mmagine\\s*[=:]\\s*)|([Ii]mage\\s*[=:]\\s*)|([Bb]andiera\\s*[=:]\\s*)", "");
+                img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)", "");
+                img = img.replaceAll("\"", "\"\"");
+                return img.trim();
+//                } else if (pos2 < pos1) {
+//                    String img = textTag.substring(pos2, end2);
+//                    img = img.replaceAll(".*[Ii]mmagine\\s*[=:]\\s*", "");
+//                    img = img.replaceAll(".*[fF]ile\\s*:\\s*", "");
+//                    img = img.replaceAll("<!--.*?(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf)", "");
+//                    return img.trim();
+//                }
             }
             return "";
         }
     }
 
-    static class ReducerImage extends Reducer<LongWritable, Text, LongWritable, Text> {
+    static class ReducerImage extends Reducer<LongWritable, Text, Text, NullWritable> {
+
+        private static boolean exReducer = false;
+        private final String HEADER = "pp_page;pp_value";
 
         @Override
         protected void reduce(LongWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
@@ -128,8 +144,17 @@ public class BigDataProject {
 //            context.write(key, new Text(row));
 //            HERE WE GOT SORTED VALUES BY TIME
             for (Text value : values) {
-                context.write(key, value);
+                String row = "";
+                if (!exReducer) {
+                    row = HEADER + "\n";
+                }
+                row += (key + ";" + value);
+                context.write(new Text(row), NullWritable.get());
             }
+            if (!exReducer) {
+                exReducer = !exReducer;
+            }
+
             // context.write(key.key, new Text(row));
         }
     }
