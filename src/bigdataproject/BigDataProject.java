@@ -81,8 +81,7 @@ public class BigDataProject {
             String regExp1 = "([fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
                     + "([Ii]mage\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
-                    + "([Bb]andiera\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
-                    + "([Pp]anorama\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
+                    + "([Bb]andiera\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
             String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
             Pattern pattern1 = Pattern.compile(regExp1);
             Matcher matcher = pattern1.matcher(text);
@@ -121,7 +120,7 @@ public class BigDataProject {
                 if (!exReducer) {
                     row = HEADER + "\n";
                 }
-                row += (key + ";" + value);
+                row += (key + "," + value);
                 context.write(new Text(row), NullWritable.get());
             }
             if (!exReducer) {
