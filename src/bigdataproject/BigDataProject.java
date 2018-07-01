@@ -110,7 +110,7 @@ public class BigDataProject {
     static class ReducerImage extends Reducer<LongWritable, Text, Text, NullWritable> {
 
         private static boolean exReducer = false;
-        private final String HEADER = "pp_page;pp_value";
+        private final String HEADER = "pp_page,pp_value";
 
         @Override
         protected void reduce(LongWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
