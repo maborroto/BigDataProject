@@ -78,13 +78,12 @@ public class BigDataProject {
          */
         private static String extractImage(String textTag) {
             //REGULAR EXPRESION TO DETECT THE IMAGES IN THE TEXT
-            String regExp1 = "([fF]ile\\s*:\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
-                    + "([Ii]mmagine\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
-                    + "([Ii]mage\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
-                    + "([Bb]andiera\\s*[=:]\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
-            String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
+            String regExp1 = "([fF]ile\\s*:(?!\\n)\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Ii]mmagine\\s*[=:](?!\\n)\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))|"
+                    + "([Ii]mage\\s*[=:](?!\\n)\\s*.*?\\.(JPG|jpg|JPEG|jpeg|GIF|gif|PNG|png|tiff|TIFF|BMP|bmp|SVG|svg|XCF|xcf))";
+//            String text = textTag.replaceAll("(\\|)|(\\[|\\])|(\\{|\\})", "\n");
             Pattern pattern1 = Pattern.compile(regExp1);
-            Matcher matcher = pattern1.matcher(text);
+            Matcher matcher = pattern1.matcher(textTag);
 
             int pos = Integer.MAX_VALUE;
             int end = Integer.MAX_VALUE;
